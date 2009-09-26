@@ -1,14 +1,16 @@
 <?php
 
 $plugin['name'] = 'soo_required_files';
-$plugin['version'] = '0.1.1';
+$plugin['version'] = '0.2';
 $plugin['author'] = 'Jeff Soo';
 $plugin['author_uri'] = 'http://ipsedixit.net/txp/';
 $plugin['description'] = 'Load JavaScript and CSS files per article';
 $plugin['type'] = 1; 
 
-if (!defined('PLUGIN_HAS_PREFS')) define('PLUGIN_HAS_PREFS', 0x0001); 
-if (!defined('PLUGIN_LIFECYCLE_NOTIFY')) define('PLUGIN_LIFECYCLE_NOTIFY', 0x0002); 
+if ( ! defined('PLUGIN_HAS_PREFS') )
+	define('PLUGIN_HAS_PREFS', 0x0001); 
+if ( ! defined('PLUGIN_LIFECYCLE_NOTIFY') ) 
+	define('PLUGIN_LIFECYCLE_NOTIFY', 0x0002); 
 $plugin['flags'] = PLUGIN_HAS_PREFS | PLUGIN_LIFECYCLE_NOTIFY;
 
 if (!defined('txpinterface'))
@@ -35,7 +37,7 @@ function soo_required_files_prefs( $event, $step ) {
 	if ( function_exists('soo_plugin_pref') )
 		return soo_plugin_pref($event, $step, soo_required_files_defaults());
 	if ( substr($event, 0, 12) == 'plugin_prefs' ) {
-		$plugin = substr($event, 12);
+		$plugin = substr($event, 13);
 		$message = '<p><br /><strong>' . gTxt('edit') . " $plugin " .
 			gTxt('edit_preferences') . ':</strong><br />' . gTxt('install_plugin') . 
 			' <a href="http://ipsedixit.net/txp/92/soo_plugin_pref">' . 
@@ -51,12 +53,12 @@ function soo_required_files_defaults( ) {
 			'html'	=>	'text_input',
 			'text'	=>	'Custom field name',
 		),
-		'default_css_dir'	=>	array(
+		'css_dir'	=>	array(
 			'val'	=>	'css/',
 			'html'	=>	'text_input',
 			'text'	=>	'Default css dir (relative to base URL, with closing slash)',
 		),
-		'default_js_dir'	=>	array(
+		'js_dir'	=>	array(
 			'val'	=>	'js/',
 			'html'	=>	'text_input',
 			'text'	=>	'Default js dir (relative to base URL, with closing slash)',
@@ -66,34 +68,69 @@ function soo_required_files_defaults( ) {
 			'html'	=>	'text_input',
 			'text'	=>	'Optional prefix for form names',
 		),
+		'per_page'	=>	array(
+			'val'	=>	0,
+			'html'	=>	'yesnoradio',
+			'text'	=>	'Load {page}.css and {page}.js?',
+		),
+		'per_section'	=>	array(
+			'val'	=>	0,
+			'html'	=>	'yesnoradio',
+			'text'	=>	'Load {section}.css and {section}.js?',
+		),
 	);
 }
 
-function soo_required_files( ) {
+function soo_required_files( $atts, $thing = '' ) {
 	
-	global $soo_required_files, $thisarticle;
+	global $soo_required_files, $page, $s, $id;
+	extract($soo_required_files);
+	$required = do_list($thing);
 	
-	if ( empty($thisarticle) ) return;	// requires individual article context
+	// tag atts override defaults/prefs
+	foreach ( $atts as $k => $v )
+		if ( array_key_exists($k, $soo_required_files) )
+			$$k = $v;
+	
+	if ( $per_page )
+		$required = array_merge($required, _soo_required_files_add($page));
+	
+	if ( $per_section )
+		$required = array_merge($required, _soo_required_files_add($s));
+	
+	// if individual article, get custom field contents
+	if ( $id and $custom_field )
+		$required = array_merge($required, do_list(custom_field(array(
+			'name'		=>	$custom_field,
+			'escape'	=>	'html',
+			'default'	=>	'',
+		))));
+	
+	$required = array_unique($required);
 
-	$custom_field_atts = array(
-		'name'		=>	$soo_required_files['custom_field'],
-		'escape'	=>	'html',
-		'default'	=>	'',
-		);
-		
-	$required = do_list(custom_field($custom_field_atts));
 	foreach ( $required as $req ) {
-		if ( preg_match('/\.css$/', $req) )
+		if ( substr(strtolower($req), -4) === '.css' )
 			$out[] = '<link rel="stylesheet" type="text/css" href="' . 
-			hu . $soo_required_files['default_css_dir'] . $req . '" />';
-		elseif ( preg_match('/\.js$/', $req) )
+			hu . $css_dir . $req . '" />';
+		elseif ( substr(strtolower($req), -3) === '.js' )
 			$out[] = '<script type="text/javascript" src="' . 
-			hu . $soo_required_files['default_js_dir'] . $req . '"></script>';
+			hu . $js_dir . $req . '"></script>';
 		elseif ( $req )
-			$out[] = parse_form($soo_required_files['form_prefix'] . $req);
+			$out[] = parse_form($form_prefix . $req);
 	}
+	
 	return isset($out) ? implode("\n", $out) : '';
+}
 
+function _soo_required_files_add( $name ) {
+	global $soo_required_files;
+	extract($soo_required_files);
+	$path_root = $_SERVER['DOCUMENT_ROOT'] . '/';
+	if ( file_exists($path_root . $css_dir . $name . '.css') )
+		$out[] = $name . '.css';
+	if ( file_exists($path_root . $js_dir . $name . '.js') )
+		$out[] = $name . '.js';
+	return isset($out) ? $out : array();
 }
 
 # --- END PLUGIN CODE ---
@@ -140,19 +177,88 @@ div#sed_help kbd {
 # --- BEGIN PLUGIN HELP ---
 <div id="sed_help">
 
+ <div id="toc">
+
+h2. Contents
+
+* "Overview":#overview
+* "Requirements":#requirements
+* "Installation":#installation
+** "Upgrading from 0.1.1":#upgrading
+* "Usage":#usage
+** "Attributes":#attributes
+** "Per-page loading":#per-page
+** "Per-section loading":#per-section
+** "Per-article loading":#per-article
+** "Loading tag contents":#tag-contents
+** "Load order":#load-order
+* "Preferences & defaults":#defaults
+* "Examples":#examples
+* "History":#history
+
+ </div>
+
 h1. soo_required_files
 
-Article-specific loading of CSS and JavaScript files in the page @<head>@ (or anywhere you like). For background, see "Article-specific CSS & JavaScript in Textpattern":http://ipsedixit.net/txp/73/article-specific-css-javascript-in-textpattern.
+h2(#overview). Overview
 
-h2. Requirements
+Automatic loading of CSS and JavaScript files in the page @<head>@ (or anywhere you like). For background, see "Article-specific CSS & JavaScript in Textpattern":http://ipsedixit.net/txp/73/article-specific-css-javascript-in-textpattern.
 
-A custom field, named *Requires* by default. *soo_required_files* was developed in Txp 4.0.8 and may not have been tested in earlier versions. 
+*soo_required_files* has four options for loading files and forms:
 
-h2. Usage
+* all contexts (by tag contents)
+* per page (for files with matching names)
+* per section (for files with matching names)
+* per article (by custom field)
 
-Place the @soo_required_files@ tag in the page @<head>@. The tag only produces output when there is individual article context and when the article has an entry in the *Requires* field.
+These may be used in any combination.
+
+h2(#requirements). Requirements
+
+No special requirements, except that per-article use %(required)requires% a custom field (named *Requires* by default). 
+
+All my plugins are generally developed in the latest Txp public release and may not have been tested in earlier versions. 
+
+*soo_required_files* is compatible with "soo_plugin_pref":http://ipsedixit.net/txp/92/soo_plugin_pref, which %(required)requires% Txp version 4.2.0 or greater.
+
+h2(#installation). Installation
+
+Install "soo_plugin_pref":http://ipsedixit.net/txp/92/soo_plugin_pref if you want to change default settings.
+
+For per-article file and form loading, "name one of your custom fields":http://textbook.textpattern.net/wiki/index.php?title=Advanced_Preferences#Custom_Fields "Requires". (If you wish to name it something else, change the custom field setting in plugin preferences (see "Preferences & defaults":#defaults, below.)
+
+h3(#upgrading). Upgrading from 0.1.1
+
+If you are upgrading from version 0.1.1 with *soo_plugin_pref*, check preferences after installation. Two attribute names have been changed in this version, meaning any custom settings for those attributes (default js and css directories) will be overwritten on upgrade.
+
+h2(#usage). Usage
+
+Place the @soo_required_files@ tag in the page @<head>@. It works as either a single or container tag:
 
 pre. <txp:soo_required_files />
+
+or
+
+pre. <txp:soo_required_files>
+	<!-- comma-separated list of file and form names -->
+</txp:soo_required_files>
+
+h3(#attributes). Attributes
+
+You can override any of the preferences with its corresponding attribute; the following are the ones you might actually want to set this way:
+
+* @per_page@ _(boolean)_ Whether to enable per-page loading
+* @per_section@ _(boolean)_ Whether to enable per-section loading
+
+h3(#per-page). Per-page loading
+
+When this option is enabled, either through "preferences":#defaults or by the @per_page@ attribute, the plugin will look for a css and a js file with the same name as the current page. For example, if the current section uses a page called "article", the plugin will look for files named "article.css" and "article.js" in their respective directories.
+
+h3(#per-section). Per-section loading
+
+Works the same as per-page loading, except based on the current section name (and the @per_section@ attribute/preference).
+
+h3(#per-article). Per-article loading
 
 The *Requires* field takes a comma-separated list. List items can include:
 
@@ -166,18 +272,36 @@ Any item ending in ".css" is assumed to be a CSS file. It will result in a @<lin
 
 Anything else is assumed to be the name of a Txp form. The plugin will attempt to output the named form (first adding the default prefix; see "Defaults":#defaults, below).
 
-h2(#defaults). Defaults
+h3(#tag-contents). Loading tag contents
 
-You can change the default values for custom field name, JavaScript and CSS directories, and form-name prefix. The more elegant way is to install the "soo_plugin_pref":http://ipsedixit.net/txp/92/soo_plugin_pref plugin (which %(required)requires% Txp 4.2.0 or greater). But if you don't want another plugin and don't mind editing code you could directly edit the defaults array in the plugin code; look for the @soo_required_files_defaults()@ function and edit the @val@ values as desired.
+If you use @soo_required_files@ as a container, the tag contents are treated in the same way as the *Requires* field contents, above. That is, the tag contents should be a comma-separated list and can be any combination of css files, js files, and Txp form names.
 
-On installation the defaults are:
+h3(#load-order). Load order
 
-|_. Custom field name|<kbd>Requires</kbd>|
-|_. CSS directory|@css/@|
-|_. JS directory|@js/@|
-|_. Form-name prefix|@require_@|
+Files and forms are loaded in the following order:
 
-h2. Examples
+# Tag contents
+# Per-page files
+# Per-section files
+# *Requires* field contents
+
+h2(#defaults). Preferences & defaults
+
+You can change the default values for various settings and attributes by installing the "soo_plugin_pref":http://ipsedixit.net/txp/92/soo_plugin_pref plugin. Once installed you can access the preferences "by clicking the *Options* link for *soo_required_files* in the plugin list":http://textbook.textpattern.net/wiki/index.php?title=Plugins#Panel_layout_.26_controls.
+
+The initial defaults are:
+
+|_. Attribute|_. Description|_. Default|
+|@custom_field@|_. Custom field name|<kbd>Requires</kbd>|
+|@css_dir@|_. CSS directory|<kbd>css/</kbd>|
+|@js_dir@|_. JS directory|<kbd>js/</kbd>|
+|@form_prefix@|_. Form-name prefix|<kbd>require_</kbd>|
+|@per_page@|_. Per-page loading|No|
+|@per_section@|_. Per-section loading|No|
+
+h2(#examples). Examples
+
+h3. Using the Requires field
 
 With defaults as above, entering <kbd>script1.js, style1.css, foo </kbd> in the *Requires* field will get @<txp:soo_required_files />@ to output something like:
 
@@ -187,6 +311,32 @@ pre. <script type="text/javascript" src="http://example.com/js/script1.js"></scr
 followed by whatever is in the form named "require_foo".
 
 Forms are especially useful for preset combinations of files. For example, some scripts (e.g. "Shadowbox":http://www.shadowbox-js.com/) require a mix of JavaScript and CSS files. Putting the appropriate @<script>@ and @<link>@ elements in a form allows you to call this up with a single entry in the *Requires* field. So to load my "require_Shadowbox" form (which loads the scripts and CSS required for Shadowbox), I enter <kbd>Shadowbox</kbd> in the *Requires* field.
+
+h3. Combining per-section/page, per-article, and tag content file loading
+
+For my "personal website":http://ipsedixit.net/ I have CSS files named after each section (including the default section), plus a file called "base.css" for common styles. Some articles have specific js/css requirements, so I also have a *Requires* field, used as above. I have a form called @page_top@ that creates the @<head>@ element for every section. It doesn't have any @<script>@ or @<link>@ tags, just this:
+
+pre. <txp:soo_required_files>base.css</txp:soo_required_files>
+
+Because I have enabled per-section loading in preferences, every HTML page automatically gets both the base stylesheet and the section-specific stylesheet, and individual article pages will also load anything listed in *Requires*.
+
+h2(#history). History
+
+h3. Version 0.2 (2009/09/25)
+
+* New features:
+** Per-section and/or per-page file loading
+** Container tag mode for additional files/forms
+** All preferences can now be overriden by tag attributes
+* Note: new attribute names for default js and css directories. Users upgrading from version 0.1.1 should check preferences and update these values if needed.
+
+h3. Version 0.1.1 (2009/09/18)
+
+* Added compatibility with "soo_plugin_pref":http://ipsedixit.net/txp/92/soo_plugin_pref for preference management
+
+h3. Version 0.1 (2009/05/15)
+
+* Initial release. Per-article loading of js/css files, Txp forms.
 
 </div>
 # --- END PLUGIN HELP ---
