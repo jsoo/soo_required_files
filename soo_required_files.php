@@ -1,7 +1,7 @@
 <?php
 
 $plugin['name'] = 'soo_required_files';
-$plugin['version'] = '0.2';
+$plugin['version'] = '0.2.1';
 $plugin['author'] = 'Jeff Soo';
 $plugin['author_uri'] = 'http://ipsedixit.net/txp/';
 $plugin['description'] = 'Load JavaScript and CSS files per article';
@@ -125,7 +125,7 @@ function soo_required_files( $atts, $thing = '' ) {
 function _soo_required_files_add( $name ) {
 	global $soo_required_files;
 	extract($soo_required_files);
-	$path_root = $_SERVER['DOCUMENT_ROOT'] . '/';
+	$path_root = preg_replace('/index.php/', '', $_SERVER['SCRIPT_FILENAME']);
 	if ( file_exists($path_root . $css_dir . $name . '.css') )
 		$out[] = $name . '.css';
 	if ( file_exists($path_root . $js_dir . $name . '.js') )
@@ -321,6 +321,10 @@ pre. <txp:soo_required_files>base.css</txp:soo_required_files>
 Because I have enabled per-section loading in preferences, every HTML page automatically gets both the base stylesheet and the section-specific stylesheet, and individual article pages will also load anything listed in *Requires*.
 
 h2(#history). History
+
+h3. Version 0.2.1 (2009/10/03)
+
+* Fixed to work with sub-directory installations
 
 h3. Version 0.2 (2009/09/25)
 
