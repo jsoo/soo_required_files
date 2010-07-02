@@ -223,9 +223,9 @@ All my plugins are generally developed in the latest Txp public release and may 
 
 h2(#installation). Installation
 
-Install "soo_plugin_pref":http://ipsedixit.net/txp/92/soo_plugin_pref if you want to change default settings.
-
 For per-article file and form loading, "name one of your custom fields":http://textbook.textpattern.net/wiki/index.php?title=Advanced_Preferences#Custom_Fields "Requires". (If you wish to name it something else, change the custom field setting in plugin preferences (see "Preferences & defaults":#defaults, below.)
+
+Install the optional "soo_plugin_pref":http://ipsedixit.net/txp/92/soo_plugin_pref if you want to change default settings (Txp version 4.2.0 or greater %(required)required%).
 
 h3(#upgrading). Upgrading from 0.1.1
 
