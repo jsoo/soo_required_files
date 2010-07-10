@@ -1,7 +1,7 @@
 <?php
 
 $plugin['name'] = 'soo_required_files';
-$plugin['version'] = '0.2.1';
+$plugin['version'] = '0.2.2';
 $plugin['author'] = 'Jeff Soo';
 $plugin['author_uri'] = 'http://ipsedixit.net/txp/';
 $plugin['description'] = 'Load JavaScript and CSS files per article';
@@ -85,7 +85,7 @@ function soo_required_files( $atts, $thing = '' ) {
 	
 	global $soo_required_files, $page, $s, $id;
 	extract($soo_required_files);
-	$required = do_list($thing);
+	$required = do_list(parse($thing));
 	
 	// tag atts override defaults/prefs
 	foreach ( $atts as $k => $v )
@@ -276,6 +276,8 @@ h3(#tag-contents). Loading tag contents
 
 If you use @soo_required_files@ as a container, the tag contents are treated in the same way as the *Requires* field contents, above. That is, the tag contents should be a comma-separated list and can be any combination of css files, js files, and Txp form names.
 
+As of version 0.2.2 you can include Txp tags in the tag contents, allowing e.g. Txp conditional tags for further automation options.
+
 h3(#load-order). Load order
 
 Files and forms are loaded in the following order:
@@ -321,6 +323,10 @@ pre. <txp:soo_required_files>base.css</txp:soo_required_files>
 Because I have enabled per-section loading in preferences, every HTML page automatically gets both the base stylesheet and the section-specific stylesheet, and individual article pages will also load anything listed in *Requires*.
 
 h2(#history). History
+
+h3. Version 0.2.2 (2010/07/10)
+
+* Tag contents can now include other Txp tags, allowing e.g. Txp conditional tags for further automation options.
 
 h3. Version 0.2.1 (2009/10/03)
 
