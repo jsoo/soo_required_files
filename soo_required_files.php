@@ -1,36 +1,37 @@
 <?php
 
 $plugin['name'] = 'soo_required_files';
-$plugin['version'] = '0.2.3';
+$plugin['version'] = '0.2.2';
 $plugin['author'] = 'Jeff Soo';
 $plugin['author_uri'] = 'http://ipsedixit.net/txp/';
 $plugin['description'] = 'Load JavaScript and CSS files per article';
-$plugin['type'] = 1; // load on admin side for prefs management
+$plugin['type'] = 1; 
 
-defined('PLUGIN_HAS_PREFS') or define('PLUGIN_HAS_PREFS', 0x0001); 
-defined('PLUGIN_LIFECYCLE_NOTIFY') or define('PLUGIN_LIFECYCLE_NOTIFY', 0x0002); 
+if ( ! defined('PLUGIN_HAS_PREFS') )
+	define('PLUGIN_HAS_PREFS', 0x0001); 
+if ( ! defined('PLUGIN_LIFECYCLE_NOTIFY') ) 
+	define('PLUGIN_LIFECYCLE_NOTIFY', 0x0002); 
 $plugin['flags'] = PLUGIN_HAS_PREFS | PLUGIN_LIFECYCLE_NOTIFY;
 
-defined('txpinterface') or @include_once('zem_tpl.php');
+if (!defined('txpinterface'))
+	@include_once('zem_tpl.php');
 
 # --- BEGIN PLUGIN CODE ---
 
 @require_plugin('soo_plugin_pref');		// optional
 
-// Plugin init not needed on admin side
-if ( @txpinterface == 'public' )
-{
-	global $soo_required_files;
-	$soo_plugin_display_prefs = function_exists('soo_plugin_pref_vals') ? 
-		array_merge(soo_required_files_defaults(true), soo_plugin_pref_vals('soo_required_files')) : soo_required_files_defaults(true);
-}
-elseif ( @txpinterface == 'admin' ) 
-{
-	add_privs('plugin_prefs.soo_required_files','1,2');
-	add_privs('plugin_lifecycle.soo_required_files','1,2');
-	register_callback('soo_required_files_prefs', 'plugin_prefs.soo_required_files');
-	register_callback('soo_required_files_prefs', 'plugin_lifecycle.soo_required_files');
-}
+global $soo_required_files;
+
+if ( function_exists('soo_plugin_pref_vals') )
+	$soo_required_files = soo_plugin_pref_vals('soo_required_files');
+else 
+	foreach ( soo_required_files_defaults() as $name => $val )
+		$soo_required_files[$name] = $val;
+
+add_privs('plugin_prefs.soo_required_files','1,2');
+add_privs('plugin_lifecycle.soo_required_files','1,2');
+register_callback('soo_required_files_prefs', 'plugin_prefs.soo_required_files');
+register_callback('soo_required_files_prefs', 'plugin_lifecycle.soo_required_files');
 
 function soo_required_files_prefs( $event, $step ) {
 	if ( function_exists('soo_plugin_pref') )
@@ -322,10 +323,6 @@ pre. <txp:soo_required_files>base.css</txp:soo_required_files>
 Because I have enabled per-section loading in preferences, every HTML page automatically gets both the base stylesheet and the section-specific stylesheet, and individual article pages will also load anything listed in *Requires*.
 
 h2(#history). History
-
-h3. Version 0.2.3 (2010/12/20)
-
-* Code cleaning only; no functional changes
 
 h3. Version 0.2.2 (2010/07/10)
 
