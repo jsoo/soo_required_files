@@ -1,7 +1,7 @@
 <?php
 
 $plugin['name'] = 'soo_required_files';
-$plugin['version'] = '0.2.3';
+$plugin['version'] = '0.2.4';
 $plugin['author'] = 'Jeff Soo';
 $plugin['author_uri'] = 'http://ipsedixit.net/txp/';
 $plugin['description'] = 'Load JavaScript and CSS files per article';
@@ -17,26 +17,22 @@ defined('txpinterface') or @include_once('zem_tpl.php');
 
 @require_plugin('soo_plugin_pref');		// optional
 
-// Plugin init not needed on admin side
-if ( @txpinterface == 'public' )
-{
-	global $soo_required_files;
-	$soo_required_files = function_exists('soo_plugin_pref_vals') ? 
-		array_merge(soo_required_files_defaults(true), soo_plugin_pref_vals('soo_required_files')) 
-		: soo_required_files_defaults(true);
-}
-elseif ( @txpinterface == 'admin' ) 
+if ( @txpinterface == 'admin' ) 
 {
 	add_privs('plugin_prefs.soo_required_files','1,2');
 	add_privs('plugin_lifecycle.soo_required_files','1,2');
-	register_callback('soo_required_files_prefs', 'plugin_prefs.soo_required_files');
-	register_callback('soo_required_files_prefs', 'plugin_lifecycle.soo_required_files');
+	register_callback('soo_required_files_manage_prefs', 'plugin_prefs.soo_required_files');
+	register_callback('soo_required_files_manage_prefs', 'plugin_lifecycle.soo_required_files');
 }
 
-function soo_required_files_prefs( $event, $step ) {
+function soo_required_files_manage_prefs( $event, $step ) 
+{
 	if ( function_exists('soo_plugin_pref') )
-		return soo_plugin_pref($event, $step, soo_required_files_defaults());
-	if ( substr($event, 0, 12) == 'plugin_prefs' ) {
+		return soo_plugin_pref($event, $step, soo_required_files_pref_spec());
+	
+		// message to install soo_plugin_pref
+	if ( substr($event, 0, 12) == 'plugin_prefs' ) 
+	{
 		$plugin = substr($event, 13);
 		$message = '<p><br /><strong>' . gTxt('edit') . " $plugin " .
 			gTxt('edit_preferences') . ':</strong><br />' . gTxt('install_plugin') . 
@@ -46,54 +42,65 @@ function soo_required_files_prefs( $event, $step ) {
 	}
 }
 
-function soo_required_files_defaults( $vals_only = false ) {
-	$defaults = array(
-		'custom_field'		=>	array(
-			'val'	=>	'Requires',
-			'html'	=>	'text_input',
-			'text'	=>	'Custom field name',
+function soo_required_files_pref_spec( )
+{
+	return array(
+		'custom_field' => array(
+			'val'	=> 'Requires',
+			'html'	=> 'text_input',
+			'text'	=> 'Custom field name',
 		),
-		'css_dir'	=>	array(
-			'val'	=>	'css/',
-			'html'	=>	'text_input',
-			'text'	=>	'Default css dir (relative to base URL, with closing slash)',
+		'css_dir' => array(
+			'val'	=> 'css/',
+			'html'	=> 'text_input',
+			'text'	=> 'Default css dir (relative to base URL, with closing slash)',
 		),
-		'js_dir'	=>	array(
-			'val'	=>	'js/',
-			'html'	=>	'text_input',
-			'text'	=>	'Default js dir (relative to base URL, with closing slash)',
+		'js_dir' => array(
+			'val'	=> 'js/',
+			'html'	=> 'text_input',
+			'text'	=> 'Default js dir (relative to base URL, with closing slash)',
 		),
-		'form_prefix'	=>	array(
-			'val'	=>	'require_',
-			'html'	=>	'text_input',
-			'text'	=>	'Optional prefix for form names',
+		'form_prefix' => array(
+			'val'	=> 'require_',
+			'html'	=> 'text_input',
+			'text'	=> 'Optional prefix for form names',
 		),
-		'per_page'	=>	array(
-			'val'	=>	0,
-			'html'	=>	'yesnoradio',
-			'text'	=>	'Load {page}.css and {page}.js?',
+		'per_page' => array(
+			'val'	=> 0,
+			'html'	=> 'yesnoradio',
+			'text'	=> 'Load {page}.css and {page}.js?',
 		),
-		'per_section'	=>	array(
-			'val'	=>	0,
-			'html'	=>	'yesnoradio',
-			'text'	=>	'Load {section}.css and {section}.js?',
+		'per_section' => array(
+			'val'	=> 0,
+			'html'	=> 'yesnoradio',
+			'text'	=> 'Load {section}.css and {section}.js?',
 		),
 	);
-	if ( $vals_only )
-		foreach ( $defaults as $name => $arr )
-			$defaults[$name] = $arr['val'];
-	return $defaults;
 }
 
-function soo_required_files( $atts, $thing = '' ) {
-	
-	global $soo_required_files, $page, $s, $id;
-	extract($soo_required_files);
+function soo_required_files_prefs( )
+{
+	static $prefs;
+	if ( ! $prefs )
+	{
+		foreach ( soo_required_files_pref_spec() as $name => $spec )
+			$prefs[$name] = $spec['val'];
+		if ( function_exists('soo_plugin_pref_vals') )
+			$prefs = array_merge($prefs, soo_plugin_pref_vals('soo_required_files'));
+	}
+	return $prefs;
+}
+
+function soo_required_files( $atts, $thing = '' )
+{
+	global $page, $s, $id;
+	$prefs = soo_required_files_prefs();
+	extract($prefs);
 	$required = do_list(parse($thing));
 	
 	// tag atts override defaults/prefs
 	foreach ( $atts as $k => $v )
-		if ( array_key_exists($k, $soo_required_files) )
+		if ( array_key_exists($k, $prefs) )
 			$$k = $v;
 	
 	if ( $per_page )
@@ -112,7 +119,8 @@ function soo_required_files( $atts, $thing = '' ) {
 	
 	$required = array_unique($required);
 
-	foreach ( $required as $req ) {
+	foreach ( $required as $req )
+	{
 		if ( substr(strtolower($req), -4) === '.css' )
 			$out[] = '<link rel="stylesheet" type="text/css" href="' . 
 			hu . $css_dir . $req . '" />';
@@ -126,9 +134,9 @@ function soo_required_files( $atts, $thing = '' ) {
 	return isset($out) ? implode("\n", $out) : '';
 }
 
-function _soo_required_files_add( $name ) {
-	global $soo_required_files;
-	extract($soo_required_files);
+function _soo_required_files_add( $name )
+{
+	extract(soo_required_files_prefs());
 	$path_root = preg_replace('/index.php/', '', $_SERVER['SCRIPT_FILENAME']);
 	if ( file_exists($path_root . $css_dir . $name . '.css') )
 		$out[] = $name . '.css';
@@ -328,7 +336,7 @@ Because I have enabled per-section loading in preferences, every HTML page autom
 
 h2(#history). History
 
-h3. Version 0.2.3 (2010/12/20)
+h3. Version 0.2.3 (2010/12/20), 0.2.4 (2010/12/27)
 
 * Code cleaning only; no functional changes
 
