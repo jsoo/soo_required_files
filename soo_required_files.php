@@ -1,7 +1,7 @@
 <?php
 
 $plugin['name'] = 'soo_required_files';
-$plugin['version'] = '0.2.4';
+$plugin['version'] = '0.2.5';
 $plugin['author'] = 'Jeff Soo';
 $plugin['author_uri'] = 'http://ipsedixit.net/txp/';
 $plugin['description'] = 'Load JavaScript and CSS files per article';
@@ -14,6 +14,12 @@ $plugin['flags'] = PLUGIN_HAS_PREFS | PLUGIN_LIFECYCLE_NOTIFY;
 defined('txpinterface') or @include_once('zem_tpl.php');
 
 # --- BEGIN PLUGIN CODE ---
+
+if(class_exists('\Textpattern\Tag\Registry')) {
+	Txp::get('\Textpattern\Tag\Registry')
+		->register('soo_required_files')
+		;
+}
 
 @require_plugin('soo_plugin_pref');		// optional
 
@@ -335,6 +341,10 @@ pre. <txp:soo_required_files>base.css</txp:soo_required_files>
 Because I have enabled per-section loading in preferences, every HTML page automatically gets both the base stylesheet and the section-specific stylesheet, and individual article pages will also load anything listed in *Requires*.
 
 h2(#history). History
+
+h3. Version 0.2.5 (2017/2/13)
+
+* Txp 4.6 compatibility update
 
 h3. Version 0.2.3 (2010/12/20), 0.2.4 (2010/12/27)
 
