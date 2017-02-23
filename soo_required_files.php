@@ -1,7 +1,7 @@
 <?php
 
 $plugin['name'] = 'soo_required_files';
-$plugin['version'] = '0.2.5';
+$plugin['version'] = '0.2.6';
 $plugin['author'] = 'Jeff Soo';
 $plugin['author_uri'] = 'http://ipsedixit.net/txp/';
 $plugin['description'] = 'Load JavaScript and CSS files per article';
@@ -81,6 +81,11 @@ function soo_required_files_pref_spec( )
 			'html'	=> 'yesnoradio',
 			'text'	=> 'Load {section}.css and {section}.js?',
 		),
+		'html_version' => array(
+			'val'	=> 5,
+			'html'	=> 'text_input',
+			'text'	=> 'HTML version (if < 5, type attribute included in output',
+		),
 	);
 }
 
@@ -124,15 +129,18 @@ function soo_required_files( $atts, $thing = '' )
 		))));
 	
 	$required = array_unique($required);
+	
+	$css_close_tag = $html_version < 5 ? ' type="text/css" />' : '>';
+	$js_close_tag = $html_version < 5 ? ' type="text/javascript"' : '';
 
 	foreach ( $required as $req )
 	{
 		if ( substr(strtolower($req), -4) === '.css' )
-			$out[] = '<link rel="stylesheet" type="text/css" href="' . 
-			hu . $css_dir . $req . '" />';
+			$out[] = '<link rel="stylesheet" href="' . 
+			hu . $css_dir . $req . '"' . $css_close_tag;
 		elseif ( substr(strtolower($req), -3) === '.js' )
-			$out[] = '<script type="text/javascript" src="' . 
-			hu . $js_dir . $req . '"></script>';
+			$out[] = '<script src="' . 
+			hu . $js_dir . $req . '"' . $js_close_tag . '></script>';
 		elseif ( $req )
 			$out[] = parse_form($form_prefix . $req);
 	}
@@ -249,6 +257,10 @@ h3(#upgrading). Upgrading from 0.1.1
 
 If you are upgrading from version 0.1.1 with *soo_plugin_pref*, check preferences after installation. Two attribute names have been changed in this version, meaning any custom settings for those attributes (default js and css directories) will be overwritten on upgrade.
 
+h3(#upgrading). Upgrading to 0.2.6
+
+Version 0.2.6 adds a new preference, @html_version@. If you are running *soo_plugin_pref*, after installing the new version of *soo_required_files* you must disable and re-enable it to install the preference. (The new preference will function at its default value even if you don't do this.)
+
 h2(#usage). Usage
 
 Place the @soo_required_files@ tag in the page @<head>@. It works as either a single or container tag:
@@ -318,6 +330,7 @@ The initial defaults are:
 |@form_prefix@|_. Form-name prefix|<kbd>require_</kbd>|
 |@per_page@|_. Per-page loading|No|
 |@per_section@|_. Per-section loading|No|
+|@html_version@|_. HTML version|5|
 
 h2(#examples). Examples
 
@@ -341,6 +354,10 @@ pre. <txp:soo_required_files>base.css</txp:soo_required_files>
 Because I have enabled per-section loading in preferences, every HTML page automatically gets both the base stylesheet and the section-specific stylesheet, and individual article pages will also load anything listed in *Requires*.
 
 h2(#history). History
+
+h3. Version 0.2.6 (2017/2/23)
+
+* Added HTML version preference, which controls whether or not the @type@ attribute is added to @link@ and @script@ tags. (NB: see Upgrade notes.)
 
 h3. Version 0.2.5 (2017/2/13)
 
