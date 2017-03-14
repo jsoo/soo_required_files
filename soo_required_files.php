@@ -1,5 +1,5 @@
 <?php
-$plugin['version'] = '0.2.6';
+$plugin['version'] = '0.2.7';
 $plugin['author'] = 'Jeff Soo';
 $plugin['author_uri'] = 'http://ipsedixit.net/txp/';
 $plugin['description'] = 'Load JavaScript and CSS files per article';
@@ -82,11 +82,6 @@ function soo_required_files_pref_spec()
             'html'  => 'yesnoradio',
             'text'  => 'Load {section}.css and {section}.js?',
         ),
-        'html_version' => array(
-            'val'   => 5,
-            'html'  => 'text_input',
-            'text'  => 'HTML version (if < 5, type attribute included in output)',
-        ),
     );
 }
 
@@ -106,7 +101,7 @@ function soo_required_files_prefs()
 
 function soo_required_files($atts, $thing = '')
 {
-    global $page, $s, $id;
+    global $page, $s, $id, $doctype;
     $prefs = soo_required_files_prefs();
     extract($prefs);
     $required = do_list(parse($thing));
@@ -132,16 +127,21 @@ function soo_required_files($atts, $thing = '')
     
     $required = array_unique($required);
     
-    $css_close_tag = $html_version < 5 ? ' type="text/css" />' : '>';
-    $js_close_tag = $html_version < 5 ? ' type="text/javascript"' : '';
-
+    $cssAtts = $jsAtts = array();
+    $cssAtts['rel'] = 'stylesheet';
+    if ($doctype != 'html5') {
+        $cssAtts['type'] = 'text/css';
+        $jsAtts['type'] = 'text/javascript';
+    }
+    
     foreach ($required as $req) {
-        if (substr(strtolower($req), -4) === '.css')
-            $out[] = '<link rel="stylesheet" href="'.
-            hu.$css_dir.$req.'"'.$css_close_tag;
-        elseif (substr(strtolower($req), -3) === '.js')
-            $out[] = '<script src="'.
-            hu.$js_dir.$req.'"'.$js_close_tag.'></script>';
+        if (substr(strtolower($req), -4) === '.css') {
+            $cssAtts['href'] = hu.$css_dir.$req;
+            $out[] = tag_void('link', $cssAtts);
+        } elseif (substr(strtolower($req), -3) === '.js') {
+            $jsAtts['src'] = hu.$js_dir.$req;
+            $out[] = tag(null, 'script', $jsAtts);
+        }
         elseif ($req)
             $out[] = parse_form($form_prefix.$req);
     }
@@ -153,10 +153,10 @@ function _soo_required_files_add($name)
 {
     extract(soo_required_files_prefs());
     $path_root = preg_replace('/index.php/', '', $_SERVER['SCRIPT_FILENAME']);
-    if (file_exists($path_root . $css_dir . $name . '.css'))
-        $out[] = $name . '.css';
-    if (file_exists($path_root . $js_dir . $name . '.js'))
-        $out[] = $name . '.js';
+    if (file_exists($path_root.$css_dir.$name.'.css'))
+        $out[] = $name.'.css';
+    if (file_exists($path_root.$js_dir.$name.'.js'))
+        $out[] = $name.'.js';
     return isset($out) ? $out : array();
 }
 

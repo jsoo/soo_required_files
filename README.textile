@@ -13,7 +13,7 @@ h2. Contents
 * "Overview":#overview
 * "Requirements":#requirements
 * "Installation":#installation
-** "Upgrading from 0.1.1":#upgrading
+** "Upgrading":#upgrading
 * "Usage":#usage
 ** "Attributes":#attributes
 ** "Per-page loading":#per-page
@@ -58,9 +58,13 @@ h3(#upgrading). Upgrading from 0.1.1
 
 If you are upgrading from version 0.1.1 with *soo_plugin_pref*, check preferences after installation. Two attribute names have been changed in this version, meaning any custom settings for those attributes (default js and css directories) will be overwritten on upgrade.
 
-h3(#upgrading). Upgrading to 0.2.6
+h3. Upgrading to 0.2.6
 
 Version 0.2.6 adds a new preference, @html_version@. If you are running *soo_plugin_pref*, after installing the new version of *soo_required_files* you must disable and re-enable it to install the preference. (The new preference will function at its default value even if you don't do this.)
+
+h3. Upgrading to 0.2.7
+
+Oops, I really didn't need to add that preference to 0.2.6. Version 0.2.7 removes it, in favor of the global doctype preference. So if you previously installed or upgraded to 0.2.6 and are running *soo_plugin_pref*, to drop the now-useless preference from the database, after upgrading to 0.2.7, disable and re-enable the plugin. Sorry about that.
 
 h2(#usage). Usage
 
@@ -131,7 +135,6 @@ The initial defaults are:
 |@form_prefix@|_. Form-name prefix|<kbd>require_</kbd>|
 |@per_page@|_. Per-page loading|No|
 |@per_section@|_. Per-section loading|No|
-|@html_version@|_. HTML version|5|
 
 h2(#examples). Examples
 
@@ -155,6 +158,10 @@ pre. <txp:soo_required_files>base.css</txp:soo_required_files>
 Because I have enabled per-section loading in preferences, every HTML page automatically gets both the base stylesheet and the section-specific stylesheet, and individual article pages will also load anything listed in *Requires*.
 
 h2(#history). History
+
+h3. Version 0.2.7 (2017/3/14)
+
+* Removes the preference added in 0.2.6 in favor of the global doctype preference. (NB: see Upgrade notes.)
 
 h3. Version 0.2.6 (2017/2/23)
 
